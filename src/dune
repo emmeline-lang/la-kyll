@@ -1,5 +1,5 @@
-(ocamllex lexer)
+(ocamllex frontmatter)
 
 (executable
   (name main)
-  (libraries mustache omd yaml))
+  (libraries mustache omd re yaml))

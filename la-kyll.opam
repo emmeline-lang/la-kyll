@@ -1,21 +1,21 @@
 opam-version: "2.0"
-name: "la-kyll"
+name: "La-Kyll"
 version: "0.1.0"
-synopsis: "Static site generator"
+synopsis: "Site"
 description: """
-Static site generator
 """
 maintainer: "Types Logics Cats TheAspiringHacker@protonmail.com"
 authors: "Types Logics Cats TheAspiringHacker@protonmail.com"
 license: "MPL 2.0"
 homepage: "https://github.com/TypesLogicsCats/la-kyll"
 bug-reports: "https://github.com/TypesLogicsCats/la-kyll/issues"
-dev-repo: "git+https://github.com/TypesLogicsCats/la-kyll.git"
+dev-repo: "git+https://github.com/TypesLogicsCats/la-kyll"
 depends: [
   "ocaml" {>= "4.08"}
   "dune" {build & >= "1.10.0"}
   "mustache" {>= "3.1.0"}
-  "omd" {= "2.0.0"}
+  "omd" {>= "1.3.1"}
+  "re" {>= "1.9.0"}
   "yaml" {>= "2.0.0"}
 ]
 build: [
