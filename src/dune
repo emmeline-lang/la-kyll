@@ -2,4 +2,4 @@
 
 (executable
   (name main)
-  (libraries mustache omd re yaml))
+  (libraries emmeline mustache omd re yaml))

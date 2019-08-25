@@ -6,7 +6,7 @@
 
 open Error
 
-let (>>=) = Stdlib.Result.bind
+open Util.Result
 
 let rec find_attr' f = function
   | [] -> None
