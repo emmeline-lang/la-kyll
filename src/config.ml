@@ -49,3 +49,5 @@ let of_file filename =
 let src t = Filename.concat t.input_dir
 
 let dest t = Filename.concat t.output_dir
+
+let template t = Filename.concat t.template_dir

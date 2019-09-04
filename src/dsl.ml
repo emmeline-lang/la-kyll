@@ -14,7 +14,7 @@ type 'a command =
   | Map of 'a E.Eval.fun_data * 'a command
   | Join of 'a command
   | Return of 'a
-  | Apply_template of Mustache.t
+  | Apply_template of Mustache.t Document.t
 
 type 'a rule =
   | Bin of Re.re * 'a command
@@ -32,14 +32,12 @@ type 'a value = 'a constraint 'a = [>
   | `Ref of 'a value ref
   | `Rule of 'a rule
   | `String of string
-  | `Template of Mustache.t
+  | `Template of Mustache.t Document.t
   | `Uninitialized
   | `Unit
   ]
 
-let rec eval_command
-          vm src_file (document : 'a Document.t)
-        : 'a value command -> ('a Document.t * 'a) = function
+let rec eval_command vm src_file document = function
   | Map(f, command) ->
      let document, a = eval_command vm src_file document command in
      ( document
@@ -47,15 +45,16 @@ let rec eval_command
   | Join command ->
      eval_command vm src_file document command
   | Return a -> (document, a)
-  | Apply_template template ->
+  | Apply_template template_doc ->
+     let template = template_doc.Document.content in
      begin match document.Document.content with
      | `String s ->
         begin match Yaml_aux.expect_obj document.yaml with
         | Ok yaml ->
            let content =
-             `String
-               (Mustache.render template (`O (("content", `String s) :: yaml)))
-           in { document with content }, `Unit
+             Mustache.render template (`O (("content", `String s) :: yaml))
+           in
+           { document with content = `String content }, `Unit
         | Error _ -> failwith "Malformed yaml"
         end
      | _ -> failwith "Type error, expected string"
@@ -83,11 +82,14 @@ let rec eval_final vm src_file config filename = function
          { Document.name = filename; yaml = `Null; content = `String str }
        in
        let doc, _ = eval_command vm src_file doc command in
-       let output_path = Filename.concat config.Config.output_dir doc.name in
-       write (fun file ->
-           output_string file str;
-           flush file
-         ) output_path
+       match doc.content with
+       | `String str ->
+          let output_path = Filename.concat config.Config.output_dir doc.name in
+          write (fun file ->
+              output_string file str;
+              flush file
+            ) output_path
+       | _ -> failwith "Type error"
      else
        eval_final vm src_file config filename xs
 
@@ -113,12 +115,19 @@ end
 module Make (C : Config) : S = struct
   let config = C.t
 
-  let add_to_template t =
-    E.Eval.add_foreign_fun t "to_template"
+  let add_load_template t =
+    E.Eval.add_foreign_fun t "load_template"
       (E.Eval.foreign ~arity:1 (fun _ args ->
            match args with
-           | [|`String s|] -> `Template (Mustache.of_string s)
-           | _ -> failwith "Type error"))
+           | [|`String filename|] ->
+              begin match Document.parse (Config.template config filename) with
+              | Ok doc ->
+                 let doc = Document.map Mustache.of_string doc in
+                 `Template doc
+              | Error _ -> failwith "Template parse error"
+              end
+           | _ -> failwith "Type error"
+      ))
 
   let add_map t =
     E.Eval.add_foreign_fun t "command_map"
@@ -179,18 +188,26 @@ module Make (C : Config) : S = struct
            | _ -> failwith "Type error"))
 
   let init vm =
+    add_load_template vm;
     add_map vm;
     add_join vm;
     add_return vm;
     add_apply_template vm;
-    add_to_template vm;
     add_bin_rule vm;
     add_text_rule vm;
     add_eval vm
 end
 
 let source_code = {|
-export (map, join, return, apply_template, eval, bin_rule, text_rule)
+export
+  ( map
+  , join
+  , return
+  , load_template
+  , apply_template
+  , eval
+  , bin_rule
+  , text_rule )
 
 import "std" List as L
 
@@ -198,23 +215,25 @@ type Command a =
 type Template =
 type Rule a =
 
-let map = foreign "command_map" forall a b . (a -> b) -> Command a -> Command b
+let load_template = foreign "load_template" forall. String -> Template
 
-let join = foreign "command_return" forall a . Command (Command a) -> Command a
+let map = foreign "command_map" forall a b. (a -> b) -> Command a -> Command b
 
-let return = foreign "command_return" forall a . a -> Command a
+let join = foreign "command_return" forall a. Command (Command a) -> Command a
+
+let return = foreign "command_return" forall a. a -> Command a
 
 let apply_template = foreign "command_apply_template"
-  forall . Template -> Command Unit
+  forall. Template -> Command Unit
 
 let eval = foreign "command_eval"
-  forall . L.List (Rule Unit) -> Unit
+  forall. L.List (Rule Unit) -> Unit
 
 let bin_rule = foreign "command_bin_rule"
-  forall a . String -> Command a -> Rule a
+  forall a. String -> Command a -> Rule a
 
 let text_rule = foreign "command_text_rule"
-  forall a . String -> Command a -> Rule a
+  forall a. String -> Command a -> Rule a
 |}
 
 let create config =
