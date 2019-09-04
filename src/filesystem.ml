@@ -8,8 +8,16 @@ let with_in f name =
   let file = open_in name in
   Fun.protect (fun () -> f file) ~finally:(fun () -> close_in file)
 
+let with_in_bin f name =
+  let file = open_in_bin name in
+  Fun.protect (fun () -> f file) ~finally:(fun () -> close_in file)
+
 let with_out f name =
   let file = open_out name in
+  Fun.protect (fun () -> f file) ~finally:(fun () -> close_out file)
+
+let with_out_bin f name =
+  let file = open_out_bin name in
   Fun.protect (fun () -> f file) ~finally:(fun () -> close_out file)
 
 let read_file file =
@@ -24,6 +32,8 @@ let read_file file =
   Buffer.contents buf
 
 let read name = with_in read_file name
+
+let read_bin name = with_in_bin read_file name
 
 let mkdir_opt name =
   if not (Sys.file_exists name) then

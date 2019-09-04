@@ -1,3 +1,3 @@
 [submodule "emmeline"]
 	path = emmeline
-	url = https://gitlab.com/emmeline/emmeline.git
+	url = ../emmeline.git

@@ -1,5 +1,6 @@
-type Document a =
+import "std" List as L
+import "la-kyll" Command as C
 
-type Template =
+let list = L.Cons (C.text_rule "index.html" (C.return ())) L.Nil
 
-let get_template = foreign "get_template" forall . String -> Document Template
+let () = C.eval list

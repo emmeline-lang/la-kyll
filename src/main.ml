@@ -16,23 +16,29 @@ let () =
   let open Util.Result in
   match
     let* config =
-      Util.annot_result "config.yml" (Config.of_file "config.yml") in
-    let+ _, file =
-      annot_emmeline_result "site.ml"
-        (E.Parser.file E.Lexer.expr (Lexing.from_channel (open_in "site.ml"))
-         |> E.Pipeline.compile
-              (Base.Hashtbl.create (module E.Qual_id.Prefix)) main_prefix)
+      Util.annot_result "config.yml" (Config.of_file "config.yml")
     in
 
+    let module M = (val (Dsl.create config) : Dsl.S) in
+    let packages = E.Pipeline.create_hashtbl () in
+    let ctx = E.Eval.create (E.Pipeline.create_hashtbl ()) in
+    E.Io.init E.Io.stdio ctx;
+    M.init ctx;
+    E.Pipeline.create_std packages ctx;
+    E.Pipeline.make_module packages
+      { E.Qual_id.Prefix.package = "la-kyll"; path = ["Command"] }
+      ctx Dsl.source_code;
+
+
+    let+ file =
+      annot_emmeline_result "site.ml"
+        (E.Parser.file E.Lexer.expr (Lexing.from_channel (open_in "site.ml"))
+         |> E.Pipeline.compile packages main_prefix)
+    in
     if Sys.file_exists config.output_dir then
       Filesystem.rm config.output_dir;
     Filesystem.mkdir_opt config.output_dir;
 
-    let module M = (val (Dsl.create config) : Dsl.S) in
-    let ctx =
-      E.Eval.create E.Io.stdio (Base.Hashtbl.create (module E.Qual_id.Prefix))
-    in
-    M.init ctx;
     ignore (E.Eval.eval ctx file)
   with
   | Ok () -> ()

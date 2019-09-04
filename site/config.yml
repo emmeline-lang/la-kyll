@@ -1,5 +1,3 @@
+input_dir: pages
 output_dir: public
 template_dir: templates
-routes:
-  _build: []
-  src: []
