@@ -6,6 +6,7 @@ variables:
 before_script:
 - opam switch
 - opam depext conf-m4 conf-pkg-config
+- opam install -y -q ./emmeline --deps-only
 - opam install -y -q . --deps-only
 
 build:
