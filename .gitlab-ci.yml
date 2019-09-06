@@ -5,7 +5,7 @@ variables:
 
 before_script:
 - opam switch
-- opam depext conf-m4
+- opam depext conf-m4 pkg-config
 - opam install -y -q . --deps-only
 
 build:
